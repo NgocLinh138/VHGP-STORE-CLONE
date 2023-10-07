@@ -5,17 +5,26 @@ import 'package:provider/provider.dart';
 import 'package:store_app/apis/apiService.dart';
 import 'package:store_app/constants/Theme.dart';
 import 'package:store_app/models/orderModel.dart';
+import 'package:store_app/models/productModel.dart';
 import 'package:store_app/provider/appProvider.dart';
 import 'package:store_app/widgets/menuTab/order_tab.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  String storeId;
+  HomeScreen({Key? key, required this.storeId}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late bool isLoading = true;
+  late bool _isLoadingMore = false;
+  late bool isListFull = false;
+  late int page = 1;
+
+  late List<ProductModel> listProduct = [];
+
   FirebaseAuth auth = FirebaseAuth.instance;
   @override
   void initState() {
@@ -28,9 +37,17 @@ class _HomeScreenState extends State<HomeScreen> {
             {
               orderListMode3 = res,
               if (orderListMode3.isNotEmpty)
-                {context.read<AppProvider>().setOrderListMode3(orderListMode3), context.read<AppProvider>().setCountOrderMode3(orderListMode3.length)}
+                {
+                  context.read<AppProvider>().setOrderListMode3(orderListMode3),
+                  context
+                      .read<AppProvider>()
+                      .setCountOrderMode3(orderListMode3.length)
+                }
               else
-                {context.read<AppProvider>().setOrderListMode3([]), context.read<AppProvider>().setCountOrderMode3(0)}
+                {
+                  context.read<AppProvider>().setOrderListMode3([]),
+                  context.read<AppProvider>().setCountOrderMode3(0)
+                }
             }
           else
             {context.read<AppProvider>().setOrderListMode3([])}
@@ -119,7 +136,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(50),
                       ),
                       child: Text(
-                        context.read<AppProvider>().getCountOrderMode3.toString(),
+                        context
+                            .read<AppProvider>()
+                            .getCountOrderMode3
+                            .toString(),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -133,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       );
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(builder: (context, provider, child) {
@@ -141,30 +162,100 @@ class _HomeScreenState extends State<HomeScreen> {
           initialIndex: 0,
           length: 3,
           child: Scaffold(
-            appBar: AppBar(
+              appBar: AppBar(
                 // backgroundColor: Color.fromARGB(255, 255, 255, 255),
                 flexibleSpace: Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight, colors: [MaterialColors.primary, Color(0xfff7892b)]),
+                    gradient: const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [MaterialColors.primary, Color(0xfff7892b)]),
                   ),
                 ),
                 centerTitle: true,
                 title: Text(
                   "Đơn hàng",
-                  style: TextStyle(color: MaterialColors.white, fontFamily: "SF Bold"),
+                  style: TextStyle(
+                      color: MaterialColors.white, fontFamily: "SF Bold"),
                 ),
                 bottom: PreferredSize(
                   preferredSize: _tabBar.preferredSize,
                   child: ColoredBox(color: Colors.white, child: _tabBar),
-                )),
-            body: TabBarView(
-              children: <Widget>[
-                OrderTab(storeId: storeId, tab: 1),
-                OrderTab(storeId: storeId, tab: 2),
-                OrderTab(storeId: storeId, tab: 3),
-              ],
-            ),
-          ));
+                ),
+              ),
+              body: Stack(
+                children: [
+                  TabBarView(
+                    children: <Widget>[
+                      OrderTab(storeId: storeId, tab: 1),
+                      OrderTab(storeId: storeId, tab: 2),
+                      OrderTab(storeId: storeId, tab: 3),
+                    ],
+                  ),
+                  Positioned(
+                    right: 15,
+                    bottom: 15,
+                    child: Container(
+                      height: 45,
+                      width: MediaQuery.of(context).size.width * 0.38,
+                      child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            textStyle: TextStyle(color: Colors.black),
+                            padding: EdgeInsets.all(0),
+                            shadowColor: Colors.white,
+                            backgroundColor:
+                                const Color.fromARGB(255, 107, 105, 102),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                  child: Icon(
+                                Icons.add,
+                                color: Colors.white,
+                              )),
+                              Padding(padding: EdgeInsets.all(3)),
+                              Text(
+                                "Tạo đơn hàng",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontFamily: "SF Bold",
+                                    fontSize: 17),
+                              ),
+                            ],
+                          ),
+                          onPressed: () => {
+                                Navigator.pushNamed(context, '/cart')
+                                    .then((_) => setState(() {
+                                          isLoading = true;
+                                          _isLoadingMore = false;
+                                          page = 1;
+                                          listProduct = [];
+                                          ApiServices.getListProduct(
+                                                  widget.storeId, 1, 8)
+                                              .then((value) => {
+                                                    if (value != null)
+                                                      {
+                                                        setState(() {
+                                                          listProduct = value;
+                                                          isLoading = false;
+                                                          _isLoadingMore =
+                                                              false;
+                                                          isListFull = false;
+                                                          page++;
+                                                        }),
+                                                      }
+                                                  });
+                                        }))
+                              }),
+                    ),
+                  ),
+                ],
+              )));
     });
   }
 }
